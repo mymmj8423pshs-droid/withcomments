@@ -116,7 +116,15 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/@liveblocks/client@latest/dist/index.js"></script>
+
 <script>
+// 2. Liveblocks 클라이언트 초기화 (CDN 버전은 'Liveblocks.createClient'로 접근해야 합니다)
+const client = Liveblocks.createClient({
+  publicApiKey: "pk_dev_8L_F1ojfeSTq2fnqqNG_zkUm_-3qzbUpAUV0xbuRi2fc2QY67bbIfBuWnRuxE08l" 
+  // ⚠️ 중요: 본인의 Liveblocks 대시보드에서 받은 publicApiKey를 꼭 적어주셔야 연동됩니다!
+});
+
 const meals = {
   "조식": {
     1:{items:["백미밥","두물머리연잎핫도그(1.2.5.6.12.13.18)","시락된장국(5.6)","감자양송이조림(5.6.13)","돼지고기장조림(5.6.10.13)","계란찜(1.2)","시금치무침(5.6)","배추김치(9)"],kcal:906.7},
@@ -159,7 +167,7 @@ const meals = {
     6:{items:["백미밥","버섯매운수제비국(5.6)","비엔나땅콩볶음(2.4.5.6.10.13.15.16)","안동찜닭(납)(5.6.13.15.18)","콩나물냉채(5.13)","메밀김치전병(2.3.5.6.16.18)","무말랭이김치","바나나"],kcal:830.9},
     7:{items:["백미밥","돼지등뼈김치찌개(9.10)","새송이간장조림(5.6.13)","회오리감자(5.6)","파인애플함박스테이크(1.2.5.6.10.12.13.15.16.18)","깍두기(9)","오이소박이(9)","열대과일샐러드&드레싱"],kcal:818.8},
     8:{items:["흑미밥","닭개장(6.15)","잔멸치깻잎찜(5.6.13)","콩나물무침(5)","비빔메밀국수(부)(3.5.6.13)","돼지불고기(5.6.10.13)","배추김치(9)","청포도","양배추찜&쌈장(5.6.13)"],kcal:929.7},
-    9:{items:["홍합잡곡밥(5)","청국장찌개(5.9.16)","돈수육1(5.6.10)","마늘종콩가루찜(5.6.13)","매운떡볶이(가)(1.5.6.13)","고추잡채김말이튀김(1.5.6.10.16)","배추김치(9)","우베라떼(2.13)","계절과일샐러드(1.2.5.6.12.14)","깻잎상추쌈(5.6)"],kcal:878.2},
+    9:{items:["귀리밥","청국장찌개(5.9.16)","돈수육1(5.6.10)","마늘종콩가루찜(5.6.13)","매운떡볶이(가)(1.5.6.13)","고추잡채김말이튀김(1.5.6.10.16)","배추김치(9)","우베라떼(2.13)","계절과일샐러드(1.2.5.6.12.14)","깻잎상추쌈(5.6)"],kcal:878.2},
     10:{items:["백미밥(부)","베트남쌀국수(5.6.9.13.15.16.18)","꼬들단무지","하트새우꼬치(5.6.9.12.13)","야채춘권(1.5.6.10.12)","배추김치(9)","천도복숭아(신비)(11)","냉파스타샐러드(1.5.6.12.13)"],kcal:845.6},
     11:{items:["발아현미밥","감자짜글이찌개(5.6.10.13.18)","우엉떡조림(5.6.13)","콩나물초무침(5.6.13)","깻잎달걀말이(1.5)","오리훈제구이(1.2.5.6.13)","배추김치(9)","레몬무쌈","수박"],kcal:927.8},
     12:{items:["눈꽃치즈김치볶음밥(1.2.5.6.9.10.13.15.16)","유부보쌈어묵국(1.5.6.10.13.16)","흑임자소스연근무침(1.5.6.13)","토마토황도절임(11.12)","자장우동볶음(부)(5.6.10.13.16)","양념치킨(4.5.6.12.13.15)","깍두기(9)","오이소박이(9)"],kcal:887.7},
@@ -216,32 +224,28 @@ const meals = {
   }
 };
 
-const favorites = JSON.parse(localStorage.getItem('pungsan_meal_favs')) || {};
-
-const adjs = ["맛있는", "배고픈", "배부른", "행복한", "급식소", "든든한", "신선한", "매콤한"];
-const nouns = ["사과", "치킨", "감자", "까스", "수박", "찌개", "튀김", "도넛"];
-let myNick = localStorage.getItem('pungsan_my_nick');
-if (!myNick) {
-  myNick = adjs[Math.floor(Math.random()*adjs.length)] + " " + nouns[Math.floor(Math.random()*nouns.length)];
-  localStorage.setItem('pungsan_my_nick', myNick);
+function cleanName(s) {
+  return s.replace(/\([\d\.]+\)\s*$/, '').trim();
+}
+function getAllergy(s) {
+  const m = s.match(/\(([\d\.]+)\)\s*$/);
+  return m ? m[1] : null;
 }
 
-let currentRoom = null;
-let roomStorage = null;
-
-function cleanName(s) { return s.replace(/\([\d\.]+\)\s*$/, '').trim(); }
-function getAllergy(s) { const m = s.match(/\(([\d\.]+)\)\s*$/); return m ? m[1] : null; }
-
 const DOW = ['일','월','화','수','목','금','토'];
-const FIRST_DOW = 1; // 2026년 6월 1일 월요일
-const _now = new Date();
-const TODAY = (_now.getFullYear() === 2026 && _now.getMonth() === 5) ? _now.getDate() : null;
+const FIRST_DOW = 1; // June 1 2026 = Monday
+const TODAY = 9;
 let selectedDay = null;
 let selectedMeal = '중식';
 
-const grid = document.getElementById('calGrid');
+// Liveblocks 룸 관련 전역 변수
+let currentRoom = null;
+let unsubscribeComments = null;
 
-// [수정완료] 충돌 오류가 나던 부분을 완전히 비우고 안전하게 새로 작성했습니다.
+const grid = document.getElementById('calGrid');
+const detail = document.getElementById('detail');
+
+// 달력 그리기 루프
 for (let i = 0; i < FIRST_DOW; i++) {
   const e = document.createElement('div');
   e.className = 'day empty';
@@ -252,56 +256,23 @@ for (let d = 1; d <= 30; d++) {
   const dow = (FIRST_DOW + d - 1) % 7;
   const cell = document.createElement('div');
   cell.className = 'day' + (d === TODAY ? ' today' : '') + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
-  cell.id = `day-cell-${d}`;
+  const preview = (meals['중식'][d] || {items:[]}).items.slice(0,3).map(cleanName).join(' · ');
+  cell.innerHTML = `<div class="day-num">${d}</div><div class="menu-preview">${preview}</div>`;
   cell.onclick = () => selectDay(d);
   grid.appendChild(cell);
 }
 
-function updateCalendarStars() {
-  for (let d = 1; d <= 30; d++) {
-    const cell = document.getElementById(`day-cell-${d}`);
-    if (!cell) continue;
-    const bStars = getStarCount(d, '조식');
-    const lStars = getStarCount(d, '중식');
-    const dStars = getStarCount(d, '석식');
-    cell.innerHTML = `
-      <div class="day-num">${d}</div>
-      <div class="day-stars-summary">
-        <div class="summary-line ${bStars > 0 ? 'has-stars' : ''}">🌅 ${bStars}</div>
-        <div class="summary-line ${lStars > 0 ? 'has-stars' : ''}">☀️ ${lStars}</div>
-        <div class="summary-line ${dStars > 0 ? 'has-stars' : ''}">🌙 ${dStars}</div>
-      </div>
-    `;
-  }
-}
-
 function selectDay(d) {
   selectedDay = d;
-  document.querySelectorAll('.day').forEach((el) => {
-    if (el.id === `day-cell-${d}`) el.classList.add('selected');
+  document.querySelectorAll('.day').forEach((el, i) => {
+    const num = i - FIRST_DOW + 1;
+    if (num === d) el.classList.add('selected');
     else el.classList.remove('selected');
   });
-  document.getElementById('mainContent').style.display = 'grid';
   renderDetail();
-  connectCommentRoom();
-}
-
-function getStarCount(day, meal) {
-  let count = 0;
-  if (!meals[meal] || !meals[meal][day]) return 0;
-  meals[meal][day].items.forEach(item => {
-    const key = `${day}-${meal}-${item}`;
-    if (favorites[key]) count++;
-  });
-  return count;
-}
-
-function toggleFavorite(day, meal, item) {
-  const key = `${day}-${meal}-${item}`;
-  favorites[key] = !favorites[key];
-  localStorage.setItem('pungsan_meal_favs', JSON.stringify(favorites));
-  updateCalendarStars();
-  renderDetail();
+  
+  // 날짜가 바뀔 때마다 해당 날짜+끼니에 맞는 Liveblocks 룸에 새로 연결합니다.
+  connectCommentRoom(d, selectedMeal);
 }
 
 function renderDetail() {
@@ -309,28 +280,25 @@ function renderDetail() {
   const dow = DOW[(FIRST_DOW + d - 1) % 7];
   const data = meals[selectedMeal][d];
   const tabClasses = { '조식': 'active-b', '중식': 'active-l', '석식': 'active-d' };
-  
-  const tabs = ['조식','중식','석식'].map(m => {
-    const stars = getStarCount(d, m);
-    return `<button class="tab${m===selectedMeal?' '+tabClasses[m]:''}" onclick="switchMeal('${m}')">${m} ${stars>0?`<span class="tab-stars">★${stars}</span>`:''}</button>`;
-  }).join('');
-  
+  const tabs = ['조식','중식','석식'].map(m =>
+    `<button class="tab${m===selectedMeal?' '+tabClasses[m]:''}" onclick="switchMeal('${m}')">${m}</button>`
+  ).join('');
   let rows = '';
   if (data) {
     rows = data.items.map(item => {
-      const isFav = !!favorites[`${d}-${selectedMeal}-${item}`];
-      return `
-        <div class="menu-row ${isFav ? 'favorite' : ''}" onclick="toggleFavorite(${d}, '${selectedMeal}', '${item}')">
-          <div class="menu-left"><span class="star-icon">★</span><span class="menu-name">${cleanName(item)}</span></div>
-          ${getAllergy(item) ? `<span class="allergy">${getAllergy(item)}</span>` : ''}
-        </div>
-      `;
+      const name = cleanName(item);
+      const allergy = getAllergy(item);
+      return `<div class="menu-row"><span class="menu-name">${name}</span>${allergy ? `<span class="allergy">${allergy}</span>` : ''}</div>`;
     }).join('');
   } else {
     rows = '<div class="no-meal">해당 식사 정보가 없어요</div>';
   }
-  document.getElementById('detail').innerHTML = `
-    <div class="detail-header"><span class="detail-date">6월 ${d}일 (${dow})</span>${data ? `<span class="detail-kcal">🔥 ${data.kcal} kcal</span>` : ''}</div>
+  detail.style.display = 'block';
+  detail.innerHTML = `
+    <div class="detail-header">
+      <span class="detail-date">6월 ${d}일 (${dow})</span>
+      ${data ? `<span class="detail-kcal">🔥 ${data.kcal} kcal</span>` : ''}
+    </div>
     <div class="meal-tabs">${tabs}</div>
     <div class="menu-list">${rows}</div>
   `;
@@ -339,67 +307,96 @@ function renderDetail() {
 function switchMeal(m) {
   selectedMeal = m;
   renderDetail();
-  connectCommentRoom();
+  // 끼니를 바꿨을 때도 룸 연결을 갱신해줍니다.
+  connectCommentRoom(selectedDay, m);
 }
 
-function connectCommentRoom() {
-  if (currentRoom) { client.leaveRoom(currentRoom.id); }
+// 🌐 Liveblocks 연결 및 실시간 동기화 함수
+function connectCommentRoom(day, meal) {
+  // 1. 기존에 연결된 구독방이 있다면 해제하고 나갑니다.
+  if (unsubscribeComments) {
+    unsubscribeComments();
+    unsubscribeComments = null;
+  }
+  if (currentRoom) {
+    client.leaveRoom(currentRoom.id);
+  }
+
+  // 끼니 문자열 인코딩 안전을 위해 영어/숫자 조합 룸 ID 생성 (예: pungsan-meal-202606-9-lunch)
+  const mealEng = meal === '조식' ? 'breakfast' : meal === '중식' ? 'lunch' : 'dinner';
+  const roomId = `pungsan-meal-202606-${day}-${mealEng}`;
+
+  // 2. 새로운 룸에 접속 (댓글 데이터를 담을 'comments' 객체를 저장소 초깃값으로 선언)
+  currentRoom = client.enterRoom(roomId, {
+    initialStorage: {
+      comments: new Liveblocks.LiveArray([])
+    }
+  });
+
+  const commentListDiv = document.getElementById('commentList');
+  if(!commentListDiv) return;
   
-  const mealEng = selectedMeal === '조식' ? 'brk' : selectedMeal === '중식' ? 'lun' : 'din';
-  const roomId = `pungsan-june-${selectedDay}-${mealEng}`;
-  
-  document.getElementById('commentList').innerHTML = '<div class="no-comments">댓글 불러오는 중...</div>';
-  
-  currentRoom = client.enterRoom(roomId, { initialStorage: { comments: new Liveblocks.LiveList() } });
-  
-  currentRoom.getStorage().then((storage) => {
-    roomStorage = storage;
-    const list = storage.root.get("comments");
+  commentListDiv.innerHTML = '<div style="color:#aaa; font-size:12px; padding:10px;">댓글방에 연결 중...</div>';
+
+  // 3. 룸 내부 저장소(Storage)의 상태 변경 실시간 감시(구독) 시작
+  unsubscribeComments = currentRoom.subscribe(currentRoom.getStorage(), (storage) => {
+    const liveArray = storage.root.get("comments");
+    if (!liveArray) return;
+
+    const commentsList = liveArray.toArray();
     
-    currentRoom.subscribe(list, () => { renderComments(list.toArray()); });
-    renderComments(list.toArray());
+    if (commentsList.length === 0) {
+      commentListDiv.innerHTML = '<div class="no-comments">가장 먼저 오늘 급식 한줄평을 남겨보세요!</div>';
+    } else {
+      commentListDiv.innerHTML = commentsList.map(c => `
+        <div class="comment-item">
+          <div class="comment-meta">익명 · ${c.time || ''}</div>
+          <div>${escapeHtml(c.text)}</div>
+        </div>
+      `).join('');
+    }
+    // 스크롤 맨 아래로 자동 이동
+    commentListDiv.scrollTop = commentListDiv.scrollHeight;
+  }, { isDeep: true });
+}
+
+// ✍️ 댓글 등록 버튼 또는 엔터 키 입력 시 호출되는 함수
+function jsAddComment() {
+  if (!currentRoom) {
+    alert("아직 댓글방에 연결되지 않았습니다. 잠시 후 다시 시도해 주세요.");
+    return;
+  }
+
+  const input = document.getElementById('commentInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // 비동기로 작동하는 Storage를 가져와 데이터를 추가합니다.
+  currentRoom.getStorage().then((storage) => {
+    const liveArray = storage.root.get("comments");
+    if (liveArray) {
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+      
+      // LiveArray에 새 댓글 오브젝트 push -> 접속한 모든 클라이언트에 즉시 반영됨
+      liveArray.push({
+        text: text,
+        time: timeStr
+      });
+      input.value = '';
+    }
+  }).catch(err => {
+    console.error("댓글 등록 실패:", err);
+    alert("댓글을 등록하지 못했습니다. 콘솔 오를 확인하세요.");
   });
 }
 
-function renderComments(cmtArray) {
-  const listEl = document.getElementById('commentList');
-  if (!cmtArray || cmtArray.length === 0) {
-    listEl.innerHTML = '<div class="no-comments">아직 등록된 한줄평이 없어요.<br>첫 댓글을 남겨보세요!</div>';
-    return;
-  }
-  listEl.innerHTML = cmtArray.map(c => `
-    <div class="comment-item">
-      <div class="comment-meta"><span>👤 ${c.nick}</span> <span>${c.time || ''}</span></div>
-      <div>${escapeHtml(c.text)}</div>
-    </div>
-  `).join('');
-  listEl.scrollTop = listEl.scrollHeight;
-}
-
-function jsAddComment() {
-  const input = document.getElementById('commentInput');
-  const txt = input.value.trim();
-  if (!txt || !roomStorage) return;
-  
-  const list = roomStorage.root.get("comments");
-  const now = new Date();
-  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-  
-  list.push({ nick: myNick, text: txt, time: timeStr });
-  input.value = '';
-}
-
+// HTML 인젝션 방어용 헬퍼
 function escapeHtml(str) {
+  if(!str) return '';
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-updateCalendarStars();
+// 앱 실행 시 오늘 날짜로 초기 선택
+selectDay(TODAY);
 </script>
-<script>globalThis.process = { env: { NODE_ENV: "production" } };</script>
-<script src="https://unpkg.com/@liveblocks/client@1.12.0/dist/index.js"></script>
-<script>
-const client = Liveblocks.createClient({ publicApiKey: "pk_prod_gT6m88mNAnH97uG6lX8W1qgZ" });
-if (TODAY) selectDay(TODAY);
-</script>
-</body>
-</html>
