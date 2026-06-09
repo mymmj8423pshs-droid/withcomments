@@ -77,7 +77,6 @@
   .legend { display: flex; gap: 16px; margin-top: 20px; font-size: 11px; color: #aaa; }
   .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
 </style>
-<script src="https://unpkg.com/@liveblocks/client@1.12.0/dist/index.js"></script>
 </head>
 <body>
 <div class="app">
@@ -227,7 +226,6 @@ if (!myNick) {
   localStorage.setItem('pungsan_my_nick', myNick);
 }
 
-const client = Liveblocks.createClient({ publicApiKey: "pk_prod_gT6m88mNAnH97uG6lX8W1qgZ" });
 let currentRoom = null;
 let roomStorage = null;
 
@@ -396,6 +394,10 @@ function escapeHtml(str) {
 
 updateCalendarStars();
 selectDay(TODAY);
+</script>
+<script src="https://unpkg.com/@liveblocks/client@1.12.0/dist/index.js"></script>
+<script>
+const client = Liveblocks.createClient({ publicApiKey: "pk_prod_gT6m88mNAnH97uG6lX8W1qgZ" });
 </script>
 </body>
 </html>
