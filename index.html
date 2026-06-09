@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>풍산고등학교 6월 급식표</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f5f4f0; color: #1a1a1a; min-height: 100vh; }
+
+  .app { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  header { margin-bottom: 22px; }
+  header h1 { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+  header p { font-size: 13px; color: #888; margin-top: 4px; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .dow { text-align: center; font-size: 11px; font-weight: 600; padding: 6px 0 10px; letter-spacing: 0.03em; color: #888; }
+  .dow.sun { color: #d94040; }
+  .dow.sat { color: #2a7bd4; }
+
+  .day { background: #fff; border-radius: 10px; padding: 6px; min-height: 85px; cursor: pointer; border: 1.5px solid transparent; transition: border-color 0.15s, box-shadow 0.15s; display: flex; flex-direction: column; justify-content: space-between; }
+  .day:hover { border-color: #c8c4bc; }
+  .day.empty { background: transparent; cursor: default; border: none; }
+  .day.today { border-color: #2a7bd4; }
+  .day.selected { border-color: #2d8c5e; background: #f0faf5; box-shadow: 0 0 0 3px rgba(45,140,94,0.1); }
+  .day.sun .day-num { color: #d94040; }
+  .day.sat .day-num { color: #2a7bd4; }
+
+  .day-num { font-size: 12px; font-weight: 600; color: #555; }
+  
+  .day-stars-summary { font-size: 10px; margin-top: auto; display: flex; flex-direction: column; gap: 1px; padding-top: 4px; border-top: 1px dashed #f0ede6; }
+  .summary-line { display: flex; align-items: center; gap: 2px; color: #666; font-weight: 500; }
+  .summary-line.has-stars { color: #f1c40f; font-weight: bold; }
+
+  /* 레이아웃 분할 (상세메뉴와 댓글창) */
+  .main-content { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  @media (max-width: 768px) { .main-content { grid-template-columns: 1fr; } }
+
+  .detail, .comments-box { background: #fff; border-radius: 14px; padding: 20px; border: 1px solid #e8e5df; display: flex; flex-direction: column; }
+
+  .detail-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
+  .detail-date { font-size: 16px; font-weight: 600; }
+  .detail-kcal { font-size: 12px; color: #f0922b; font-weight: 500; }
+
+  .meal-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid #e0ddd8; background: transparent; color: #888; transition: all 0.15s; display: flex; align-items: center; gap: 4px; }
+  .tab:hover { border-color: #aaa; }
+  .tab.active-b { background: #e8f0fa; color: #185ea5; border-color: #185ea5; }
+  .tab.active-l { background: #e8f5ec; color: #2d7a4a; border-color: #2d7a4a; }
+  .tab.active-d { background: #fef3e5; color: #b5620a; border-color: #b5620a; }
+  .tab-stars { font-size: 11px; font-weight: bold; color: #f1c40f; }
+
+  .menu-list { display: flex; flex-direction: column; gap: 5px; }
+  .menu-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8f7f4; border-radius: 8px; font-size: 13.5px; cursor: pointer; user-select: none; transition: background 0.15s; border: 1px solid transparent; }
+  .menu-row:hover { background: #f1f0ec; }
+  .menu-row.favorite { background: #fffdeb; border: 1px solid #fcebb6; }
+  .menu-left { display: flex; align-items: center; gap: 8px; }
+  .star-icon { color: #ccc; font-size: 14px; transition: color 0.15s; }
+  .menu-row.favorite .star-icon { color: #f1c40f; }
+  .menu-name { color: #1a1a1a; }
+  .allergy { font-size: 10px; color: #bbb; font-weight: 400; margin-left: 8px; flex-shrink: 0; }
+  .no-meal { text-align: center; padding: 2rem; color: #bbb; font-size: 13px; }
+
+  /* 댓글창 스타일 */
+  .comments-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  .comment-list { flex-grow: 1; min-height: 180px; max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; padding-right: 4px; }
+  .comment-item { background: #f8f7f4; padding: 8px 12px; border-radius: 8px; font-size: 13px; line-height: 1.4; }
+  .comment-meta { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-bottom: 3px; font-weight: 500; }
+  .comment-input-wrap { display: flex; gap: 6px; }
+  .comment-input { flex-grow: 1; padding: 8px 12px; border: 1px solid #e0ddd8; border-radius: 8px; font-size: 13px; outline: none; }
+  .comment-input:focus { border-color: #a0a0a0; }
+  .comment-btn { padding: 0 14px; background: #2d8c5e; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .comment-btn:hover { background: #24704b; }
+  .no-comments { text-align: center; color: #bbb; font-size: 12px; margin: auto 0; }
+
+  .legend { display: flex; gap: 16px; margin-top: 20px; font-size: 11px; color: #aaa; }
+  .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🍱 풍산고등학교 급식표</h1>
+    <p>2026년 6월 · 실시간으로 친구들과 메뉴 별점과 한줄평 댓글을 공유해보세요!</p>
+  </header>
+
+  <div class="cal-grid" id="calGrid">
+    <div class="dow sun">일</div>
+    <div class="dow">월</div>
+    <div class="dow">화</div>
+    <div class="dow">수</div>
+    <div class="dow">목</div>
+    <div class="dow">금</div>
+    <div class="dow sat">토</div>
+  </div>
+
+  <div class="main-content" id="mainContent" style="display:none;">
+    <div class="detail" id="detail"></div>
+    
+    <div class="comments-box">
+      <div class="comments-title">💬 실시간 한줄평</div>
+      <div class="comment-list" id="commentList">
+        <div class="no-comments">불러오는 중...</div>
+      </div>
+      <div class="comment-input-wrap">
+        <input type="text" class="comment-input" id="commentInput" placeholder="이 급식 어때요? 댓글을 남겨보세요!" onkeydown="if(event.key==='Enter')jsAddComment()">
+        <button class="comment-btn" onclick="jsAddComment()">등록</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="legend-dot" style="background:#2a7bd4"></span>오늘</span>
+    <span><span class="legend-dot" style="background:#2d8c5e"></span>선택한 날</span>
+  </div>
+</div>
+
+<script>
+const meals = {
+  "조식": {
+    1:{items:["백미밥","두물머리연잎핫도그(1.2.5.6.12.13.18)","시락된장국(5.6)","감자양송이조림(5.6.13)","돼지고기장조림(5.6.10.13)","계란찜(1.2)","시금치무침(5.6)","배추김치(9)"],kcal:906.7},
+    2:{items:["쇠고기양송이죽(16)","감자샌드위치(1.2.5.6.10.15.16)","스크램블드에그(1.5.10)","토네이도소시지(1.2.5.6.10.12.15.16)","오이피클","사과주스(13)","토마토(친환경)(12)","그린샐러드(1.5)"],kcal:831.7},
+    3:{items:["백미밥","손만두국(1.5.6.10.16.18)","브로콜리계란찜(1.2.9.13)","오징어실채볶음(5.6.13.17)","떡갈비구이(5.6.10.12.15.16.18)","도시락김","배추김치(9)","황금카스텔라(1.2.5.6)"],kcal:923.0},
+    4:{items:["백미밥","북어무국(1.5.6)","알본디가스(1.2.5.6.10.12.13.15.16)","감자어묵조림(1.5.6.13)","콩나물무침(5)","깻잎순멸치조림(5.6)","배추김치(9)","듀얼잼파이(1.2.5)"],kcal:877.1},
+    5:{items:["백미밥","조갯살콩나물국(5.6.18)","쇠고기메추리알조림(1.5.6.13.16)","연두부&양념장(5.6)","숙주미나리무침","다시마튀각(5.13)","배추김치(9)","꽃빵튀김(콩가루)(2.5.6.13)"],kcal:856.2},
+    6:{items:["백미밥","오징어탕국(5.6.17)","가자미무조림(5.6.13)","(깐)계란장조림(마)(1.5.6.13)","단배추깨소금나물(5.6.13)","햄전(1.2.5.6.10.12.15.16)","배추김치(9)","초코칩트위스트(생)(1.2.5.6)"],kcal:923.2},
+    7:{items:["계란야채죽(1)","삼색비엔나구이(2.5.6.10.12.15.16)","오이피클","미니불고기버거(선)(1.2.5.6.10.12.13.16)","레드자몽에이드","감자샐러드(1.4.5.6.13)","바나나"],kcal:898.8},
+    8:{items:["백미밥","해물순두부찌개(1.5.6.9.10.13.17.18)","잔멸치호박씨조림(5.6.13)","단배추깨소금나물(5.6.13)","순살햄전(1.2.5.6.10.15.16)","도시락김","배추김치(9)","십원빵(1.5.6)"],kcal:908.5},
+    9:{items:["프렌치토스트&베이컨구이(1.2.5.6.10.13)","감자튀김&케첩(5.6.12)","치킨너겟(1.2.5.6.15)","오이피클(아삭)","우유(2)","콘푸로스트(2.5.6)","양상추치커리샐러드&키위드레싱(1.2.5.6.12)"],kcal:911.2},
+    10:{items:["백미밥","삼색어묵맑은국(1.5.6)","삼치무조림(5.6.13)","도라지오이무침(5.6.13)","애느타리깨소스무침(13)","스팸구이&케첩(1.2.5.6.10.12.13.15.16)","배추김치(9)","미니딸기잼파이(생)(1.2.5.6)"],kcal:876.8},
+    11:{items:["백미밥","감자호박국","단배추무생채(5.6.13)","김가루쪽파무침(5.6)","미나리돼지불고기(5.6.10.13)","동태전(사)(1.5.6)","배추김치(9)","살구파이(생)(1.2.5.6)"],kcal:849.1},
+    12:{items:["백미밥","곰탕(5.6.9.10)","오징어초무침(5.6.13.17)","취나물무침(5.6)","다시마튀각(5.13)","꼬마돈까스&케첩(1.5.6.10.12)","배추김치(9)","우리밀초코파이(1.2.5.6)"],kcal:871.2},
+    13:{items:["백미밥","참치감자찌개(5.6.16.18)","새송이고추장구이(5.6.13)","콩나물무침(5)","쥐포구이채조림(5.6)","너비아니계란전(1.2.5.6.10.12.15.16.18)","배추김치(9)","골드키위젤리(13)"],kcal:926.9},
+    14:{items:["흑임자죽","단호박곡물샌드위치(1.2.5.6.10.15.16)","비엔나소시지구이(응)(1.2.5.6.10.15.16)","오이피클","감귤주스(오)(2.13)","꽃송이치킨너겟채소샐러드(1.2.5.6.12.15)"],kcal:931.2},
+    15:{items:["백미밥","쇠고기탕국(5.6.16)","콩나물냉채(5.13)","건파래볶음","궁중너비아니구이(1.2.5.6.12.15.16)","임연수어구이(5.6)","배추김치(9)","수박에이드(13)"],kcal:920.5},
+    16:{items:["전복죽(18)","경성버거(1.2.5.6.10.12.15.16)","웨지감자비엔나구이(2.5.6.10.12.15.16)","허브소시지&소스(1.2.5.6.10.12.15.16)","오이피클(아삭)","복숭아퐁당컵과일","냉파스타샐러드(1.5.6.12.13)"],kcal:911.1},
+    17:{items:["백미밥","오징어탕국(5.6.17)","모듬유채무침(5.6.13)","떡매갈비지짐(1.2.5.6.10.12.15.16)","들기름돌김구이","배추김치(9)","마들렌(1.2.5.6)","꽃맛살메추리알샐러드(1.2.4.5.6.8.12.13.18)"],kcal:853.1},
+    18:{items:["흑미밥","건새우아욱국(5.6.9)","갈치무조림(5.6.13)","청경채된장무침(5.6)","베이컨감자채볶음(5.6.10)","옛날소시지전(1.2.5.6.10.15.16)","배추김치(9)","딸기앙슈(1.2.5.6)"],kcal:863.8},
+    19:{items:["백미밥","순두부찌개(1.5.6.9.10.13.17.18)","캔꽁치김치조림(5.6.9.13)","비름나물된장무침(5.6)","청포묵김가루무침(5.6.13)","완자전(1.2.5.6.10.12.15.16)","무말랭이김치","토마토주스(12)"],kcal:859.0},
+    20:{items:["백미밥","쇠고기버섯국(5.6.16)","게맛살어묵조림(1.5.6.13)","쑥갓두부무침(4.5.6)","순후추치킨스테이크(1.2.5.6.15.18)","배추김치(9)","사과아몬드샐러드(1.5)","짜먹는곤약젤리(사과맛)"],kcal:872.2},
+    21:{items:["쇠고기장국죽(5.6.16)","고구마슈빅데니쉬(생)(1.2.5.6)","크리스피핫도그(1.2.5.6.10.12.16)","스크램블드에그(1.5.10)","바나나우유(소)(2)","그린샐러드(1.5)","방울토마토(12)"],kcal:896.0},
+    22:{items:["백미밥","들깨순두부탕(5)","쇠고기장조림(1.5.6.13.16)","비름나물무침(5.6)","멸치고추장조림(큰)(5.6.13)","파래돌김자반(5)","배추김치(9)","레몬마들렌(1.2.5.6)"],kcal:848.5},
+    23:{items:["잣죽(19)","반미샌드위치(반)(1.2.5.6.15)","비엔나소시지&케첩(2.5.6.10.12.15.16)","훈제계란(1)","오이피클(아삭)","오렌지주스(100)(13)","사과호두샐러드(1.2.5.14)"],kcal:906.5},
+    24:{items:["백미밥","쇠고기콩나물국(5.6.16)","연근조림(5.6.13)","햄감자채볶음(1.2.5.6.10.13.15.16)","간장돼지불고기(5.6.10.13)","배추김치(9)","요구르트(요구얌)(2)","마카로니샐러드(1.2.4.5.6.13)"],kcal:921.4},
+    25:{items:["백미밥","참치김치찌개(5.9.16.18)","삼치구이(1.4.5.6.13)","우엉고추장볶음(5.6.13)","콩나물볶음(5)","도시락김","배추김치(9)","바나나치크케이크(1.2.5.6)","찹쌀꽈배기도너츠(1.2.5.6.13)"],kcal:917.2},
+    26:{items:["백미밥","쇠고기배추국(5.6.16)","목이버섯오이냉채(5.6.13.18)","동전쥐포조림(5)","간장계란함박스테이크(1.2.5.6.10.12.15.16)","배추김치(9)","멕시칸샐러드(1.2.4.5.6.10.15.16)","요구르트(한)(2)"],kcal:886.4},
+    27:{items:["백미밥","김치손만두국(1.5.6.10.16.18)","가자미구이&칠리소스(2.5.6.12.13.16.18)","브로콜리계란찜(1.2.9.13)","버터오징어채무침(17)","배추김치(9)","방울토마토(12)"],kcal:858.6},
+    28:{items:["대게살채소죽(1.8)","핫도그샌드위치(1.2.5.6.10.12.15.18)","감자튀김(벌집모양)(5.6.12)","오이피클","캐플주스(13)","계란그린샐러드(1.5)","사과(친환경)"],kcal:912.6},
+    29:{items:["백미밥","북어무국(1.5.6)","참치두부조림(5.6.13.16.18)","꽈리고추메알조림(1.5.6.13)","콩나물오색무침(5.13)","가슴살치킨텐더(1.2.5.6.15.18)","배추김치(9)","살구잼팬케이크(1.2.5.6)"],kcal:931.5},
+    30:{items:["단호박죽(부)(6.13)","불고기치즈브레드(1.5.6)","알감자버터구이(2.5.6.13)","토네이도소시지(1.2.5.6.10.12.15.16)","꽃맛살과일요거트샐러드(1.2.4.5.6.8.12.18)","바나나","자두에이드"],kcal:903.3}
+  },
+  "중식": {
+    1:{items:["기장밥","전복미역국(5.6.18)","상추파채무침(5.6.13)","비빔쫄만두(1.5.6.10.13.16.18)","돼지불고기(숯불맛)(5.6.10.13)","브로콜리감자전(5.6)","배추김치(9)","초코레드벨벳케이크(우리쌀)(1.2.5.6)","계절과일샐러드(1.2.5.6.12.14)"],kcal:924.7},
+    2:{items:["차수수밥","짬뽕국(5.6.8.9.13.16.17.18)","두부양념조림(5.6.13)","해파리냉채(13)","마늘통닭(1.5.6.13.15)","배추김치(9)","멕시칸샐러드(1.2.4.5.6.10.15.16)","참외(친환경)"],kcal:810.5},
+    3:{items:["현미밥","순두부찌개(1.5.6.9.10.13.17.18)","스팸감자조림(1.2.5.6.10.13.15.16)","카프레제샐러드(2.4.12.13)","오이부추생채(5.6.13)","순대오리불고기(2.5.6.10.13.16)","팽이버섯튀김&칠리소스(5.6.12.13)","배추김치(9)","에그타르트(1.2.5.6)"],kcal:929.9},
+    4:{items:["쇠고기채소볶음밥(1.2.5.6.10.13.15.16)","계란부추국(1.5.6.9)","모닝빵빠네(1.2.5.6.10.13.16)","수제돈까스2(1.2.5.6.10.12.13.16)","배추김치(9)","단무지","망고샐러드(1.2.5)","멜론(친환경)"],kcal:904.8},
+    5:{items:["혼합잡곡밥(5)","꽃게된장찌개(5.6.8)","꽈리고추찜(5.6)","골뱅이우동무침(5.6.13)","채소파채무침(5.6.13)","대패삼겹살돼지불고기(5.6.10.13)","가지탕수(2.5.6.13)","배추김치(9)","수박"],kcal:924.5},
+    6:{items:["백미밥","버섯매운수제비국(5.6)","비엔나땅콩볶음(2.4.5.6.10.13.15.16)","안동찜닭(납)(5.6.13.15.18)","콩나물냉채(5.13)","메밀김치전병(2.3.5.6.16.18)","무말랭이김치","바나나"],kcal:830.9},
+    7:{items:["백미밥","돼지등뼈김치찌개(9.10)","새송이간장조림(5.6.13)","회오리감자(5.6)","파인애플함박스테이크(1.2.5.6.10.12.13.15.16.18)","깍두기(9)","오이소박이(9)","열대과일샐러드&드레싱"],kcal:818.8},
+    8:{items:["흑미밥","닭개장(6.15)","잔멸치깻잎찜(5.6.13)","콩나물무침(5)","비빔메밀국수(부)(3.5.6.13)","돼지불고기(5.6.10.13)","배추김치(9)","청포도","양배추찜&쌈장(5.6.13)"],kcal:929.7},
+    9:{items:["홍합잡곡밥(5)","청국장찌개(5.9.16)","돈수육1(5.6.10)","마늘종콩가루찜(5.6.13)","매운떡볶이(가)(1.5.6.13)","고추잡채김말이튀김(1.5.6.10.16)","배추김치(9)","우베라떼(2.13)","계절과일샐러드(1.2.5.6.12.14)","깻잎상추쌈(5.6)"],kcal:878.2},
+    10:{items:["백미밥(부)","베트남쌀국수(5.6.9.13.15.16.18)","꼬들단무지","하트새우꼬치(5.6.9.12.13)","야채춘권(1.5.6.10.12)","배추김치(9)","천도복숭아(신비)(11)","냉파스타샐러드(1.5.6.12.13)"],kcal:845.6},
+    11:{items:["발아현미밥","감자짜글이찌개(5.6.10.13.18)","우엉떡조림(5.6.13)","콩나물초무침(5.6.13)","깻잎달걀말이(1.5)","오리훈제구이(1.2.5.6.13)","배추김치(9)","레몬무쌈","수박"],kcal:927.8},
+    12:{items:["눈꽃치즈김치볶음밥(1.2.5.6.9.10.13.15.16)","유부보쌈어묵국(1.5.6.10.13.16)","흑임자소스연근무침(1.5.6.13)","토마토황도절임(11.12)","자장우동볶음(부)(5.6.10.13.16)","양념치킨(4.5.6.12.13.15)","깍두기(9)","오이소박이(9)"],kcal:887.7},
+    13:{items:["백미밥","알탕(5.6.16)","골뱅이진미무침(5.6.13.17)","오이배무침(5.6.13)","조랭이떡볶음(1.5.6.13)","대패삼겹살콩나물볶음(5.6.10.13)","배추김치(9)","크림슨포도"],kcal:883.8},
+    14:{items:["눈꽃치즈돼지목살필라프(2.5.6.10.12.13.18)","김치우동국(1.2.5.6.9.13)","허브소시지&소스(1.2.5.6.10.12.15.16)","배추김치(9)","단무지","양상추샐러드(1.5.12)","방울토마토(12)"],kcal:875.8},
+    15:{items:["발아현미밥","짬뽕국(5.6.8.9.13.16.17.18)","상추부추겉절이(5.6.13)","소불고기(5.6.13.16)","콘치즈버터구이(1.2.5.6.10.13.15.16)","풋고추.가지전(5.6)","배추김치(9)","천도복숭아(신비)(11)"],kcal:891.9},
+    16:{items:["강황쌀밥","청포묵오이냉국(5.6.13.16)","두부계란구이(1.5)","멸치야채무침(5.6.13)","낙지닭갈비(2.5.6.12.13.15.16.18)","배추김치(9)","감귤(친환경)","무쌈오절판(표)(1)"],kcal:894.8},
+    17:{items:["백미밥(부)","미트스파게티(1.2.5.6.10.12.13.15.16)","마늘빵(2.5.6)","채소스프(2.5.6.13.16)","고구마프라이(1.2.5.6)","수제파인애플함박스테이크(1.2.5.6.10.12.13.16)","배추김치(9)","오이피클(아삭)","리코타치즈샐러드(1.2.5.12.13)","요구르트(한)(2)"],kcal:923.7},
+    18:{items:["자장밥(5.6.10.13.16)","꽈리고추찜(5.6)","비빔우동(5.6.13)","오이쑥갓무침(5.6.13)","누룽지탕수육(5.6.10.11.12.13)","배추김치(9)","수박화채(2.11.13.19)","토마토치즈발사믹샐러드(2.12.13)"],kcal:837.9},
+    19:{items:["감자잡채밥(5.16)","팽이버섯맑은된장국(5.6)","오이부추생채(5.6.13)","닭다리자메이카소스구이(장)(5.6.13.15.16)","배추김치(9)","수리취떡(단오)","콥요구르트샐러드(1.2.5.6.12.13)","수박"],kcal:917.1},
+    20:{items:["백미밥","사골우거지국(5.6.16)","(깐)계란장조림(1.5.6.13)","목이버섯오이냉채(5.6.13.18)","불낙새볶음(5.6.9.10.13)","배추김치(9)","양배추샐러드(메)(1.5.6.12)","참외(친환경)"],kcal:924.9},
+    21:{items:["백미밥","참치탕(5.6.16.18)","치커리무생채(13)","돼지고기두루치기(5.6.10.13)","김계란말이(1.2.5)","만두그라탕(1.2.5.6.10.12.13.16.18)","배추김치(9)","토마토(친환경)(12)"],kcal:922.0},
+    22:{items:["기장밥","나가사끼짬뽕국(6.9.13.17.18)","돼지갈비김치찜(9.10)","참나물무침(5.6)","볼어묵고추장볶음(1.5.6.13)","건새우부추전(5.6.9)","애호박전(1.5.6)","갓김치(9)","감귤(친환경)"],kcal:914.5},
+    23:{items:["옥수수쌀밥","감자애호박된장국(오)(5)","청경채오이생채(5.6.13)","애느타리마요들깨무침(1.5.6.13)","누들떡볶이(1.5.6.13)","닭목살양념구이(5.6.13.15)","배추김치(9)","수박"],kcal:871.9},
+    24:{items:["참치비빔밥(5.6.16.18)","들깨무채국","어떡어떡(1.5.6.12.13)","클로렐라생선까스(1.5.6.13)","배추김치(9)","치즈핫도그(1.2.5.6.10.12.15.18)","풋고추된장무침(5.6)","방울토마토(친환경)(12)"],kcal:928.7},
+    25:{items:["가바쌀밥","미역오이냉국(5.6.13.16)","마늘종멸치조림(5.6.13)","어수리나물무침(5.6)","치즈불닭(2.5.6.13.15)","새우감바스&마늘빵(2.5.6.9.12.13)","배추김치(9)","천도복숭아(신비)(11)"],kcal:912.2},
+    26:{items:["흑미밥","꽃게된장찌개(5.6.8)","쫄면야채무침(5.6.13)","상추부추겉절이(5.6.13)","마늘종콩가루찜(5.6.13)","돼지고기구이(10.13)","타꼬야끼(1.2.5.6.13.15.16.18)","백김치(9)","멜론(친환경)","채소스틱&쌈장(5.6)"],kcal:930.5},
+    27:{items:["백미밥","마라탕(1.2.4.5.6.10.12.13.15.16.18)","건문어초무침(5.6.13)","오이양파무침(5.6.13)","꿔바로우(1.5.6.10.11.12.13)","배추김치(9)","단무지","우유미숫가루(2.5.13)"],kcal:862.3},
+    28:{items:["백미밥","조랭이떡어묵국(1.5.6)","안동찜닭(5.6.13.15.18)","오이고추된장무침(5.6)","골뱅이야채무침(5.6.13)","깻잎고기완자전(1.2.5.6.10.12.16)","모짜렐라치즈볼(1.2.5.6.13)","배추김치(9)"],kcal:931.0},
+    29:{items:["혼합잡곡밥(5)","새알심미역국(5.6.16)","가지나물무침","돼지불고기(5.6.10.13)","메추리알떡볶이(가)(1.5.6.13)","옥수수채소튀김(5.6.13)","배추김치(9)","망고아이스티(11.13)","야채숙쌈(양배추,케일)"],kcal:914.1},
+    30:{items:["곤드레무영양밥(16)","감자애호박된장국(오)(5)","두부계란구이(1.5)","명태피조림(5.6.13)","열무무생채(5.6.13)","블랙알리오치킨(1.5.6.13.15)","배추김치(9)","거봉"],kcal:864.4}
+  },
+  "석식": {
+    1:{items:["백미밥","잔멸치아몬드조림(5.6.13)","감자채카레볶음(2.5.6.12.13.16.18)","대만식지파이(1.5.6.15.18)","부추양파겉절이(13)","짜먹는요구르트(2)","스팸김치찌개(1.2.5.6.9.10.13.15.16)"],kcal:866.6},
+    2:{items:["백미밥(부)","돈코츠라멘(1.2.5.6.10.13.15.16)","꼬들단무지","애느타리양파간장지(5.6.13)","통모짜치즈카츠(1.5.6.10.12.13.18)","배추김치(9)","리코타치즈샐러드(1.2.5.12.13)","청포도"],kcal:878.2},
+    3:{items:["김밥볶음밥(1.2.5.6.10.15.16)","꼬치어묵국(1.5.6)","브로콜리숙회(5.6.13)","삼색냉채(1.2.5.6.10.13.15.16)","간장돼지고기강정(1.5.6.10.12.13)","마라교자만두구이(1.5.6.9.10.15.16.17.18)","배추김치(9)","딸기쉐이크(2)"],kcal:886.6},
+    4:{items:["눈꽃치즈닭갈비덮밥(2.5.6.12.13.15.16.18)","유부미소장국(5.6)","열무무생채(5.6.13)","뱅글뱅글소시지(2.5.6.10.15.16)","배추김치(9)","따바오만두(1.2.5.6.10.16)","아이스망고스틱(2)"],kcal:931.0},
+    5:{items:["백미밥","버섯샤브샤브국(5.6.16)","메추리알햄조림(1.2.5.6.10.13.15.16)","도토리묵상추무침(5.6.13)","새우젓애호박볶음(5.9)","유린기(1.5.6.13.15)","배추김치(9)","미니크림치즈파이(1.2.5.6)"],kcal:923.7},
+    6:{items:["쇠고기야채주먹밥(16)","팟타이(볶음쌀국수)(주)(1.2.4.5.6.9.10.12.13.15.16.18)","가쓰오우동장국(1.2.5.6.9.13)","멘츠카츠(1.5.6.10)","웨지감자비엔나구이(2.5.6.10.12.15.16)","깍두기(9)","요구르트(엔요)(2)","콘샐러드(1.4.5.13)","방울토마토(12)"],kcal:922.1},
+    7:{items:["백미밥","감자고추장찌개(5.6.16)","탕평채(1.5.6.13.16)","뉴진면로제찜닭(2.5.6.10.12.13.15.16)","돌나물오이생채(5.6.13)","만두탕수(1.5.6.10.11.13.16.18)","배추김치(9)","초코칩쿠키(생)(1.2.5.6)"],kcal:881.6},
+    8:{items:["백미밥","게살누룽지탕(1.5.6.8.13.18)","시금치무침(5.6)","마파두부(5.6.10.12.13.18)","우엉잡채(채)(5.6.13.16)","감자말이새우튀김(1.5.6.9.12)","배추김치(9)","자두슬러시"],kcal:920.5},
+    9:{items:["낙지볶음덮밥(5.6.13)","계란부추국(1.5.6.9)","크래미숙주무침","오이고추된장무침(5.6)","깍두기(9)","스테이크피자(선)(1.2.5.6.10.12.13.15.16)","요구르트(65)(2)","양배추샐러드(1.5.12)"],kcal:921.6},
+    10:{items:["백미밥","삼색수제비국(5.6)","숯불맛치킨구이(5.6.10.13.15)","멸치야채무침(5.6.13)","브로콜리숙회(5.6.13)","베이컨감자채볶음(5.6.10)","배추김치(9)","청사과에이드"],kcal:870.1},
+    11:{items:["양배추계란볶음밥(1.5.6.13.18)","팽이버섯미소장국(5.6)","열무된장무침(5.6)","떡잡채(5.6.13.16)","황금알카츠&케첩(1.5.6.10.12)","피자군만두(1.2.5.6.10.12.16.18)","배추김치(9)","패션후르츠에이드(수)(13)"],kcal:916.6},
+    12:{items:["백미밥","쇠고기근대장국(5.6.16)","등갈비떡찜(5.6.10.13)","오징어쫄면무침(5.6.13.17)","깻잎순멸치조림(5.6)","맛살계란말이(1.2.5)","배추김치(9)","골드파인애플(조각)"],kcal:882.8},
+    13:{items:["백미밥","푸실리크림스파게티(부)(1.2.5.6.10.13.16)","동태찌개(5.6)","도라지사과생채(5.6.13)","단호박닭조림(5.6.15)","배추김치(9)","식혜","꽃맛살과일요거트샐러드(1.2.4.5.6.8.12.18)"],kcal:911.8},
+    14:{items:["백미밥","감자옹심이수제비(17)","잔멸치아몬드조림(5.6.13)","닭봉마늘데리야끼조림(5.6.12.13.15.18)","양배추깻잎생채(13)","김말이만두강정(1.5.6.10.12.13.16.18)","배추김치(9)","사과매실주스(13)"],kcal:841.9},
+    15:{items:["백미밥","새알떡만두국(1.5.6.10.15.16.18)","해물콩나물찜(5.6.8.9.13.17.18)","도라지오이생채(5.6.13)","감자멸치볶음(5.6.13)","야채튀김(5.6)","배추김치(9)","컵젤리(오)"],kcal:906.7},
+    16:{items:["삼색소보로덮밥(1.5.6.9.13.16)","북어고추장찌개(5.6.16)","치커리사과생채(5.6.13)","오코노미야끼(수)(1.2.5.6.9.10.13.15.16.17)","오징어튀김(찹)(1.5.6.17)","깍두기(9)","유산균요구르트(2)","풋고추양념무침(5.6)"],kcal:929.1},
+    17:{items:["백미밥","해물탕(5.6.8.17)","닭오븐구이(5.6.13.15)","딤섬고기창펀(1.5.6.10.16.18)","도토리묵상추무침(5.6.13)","계란떡볶이(1.5.6.13)","배추김치(9)","플레인요거트(씨리얼)(2.5.6)"],kcal:923.7},
+    18:{items:["백미밥","알탕(5.6.16)","연근땅콩조림(4.5.6.13)","콩나물볶음(5)","카레닭갈비(2.5.6.12.13.15.16.18)","오징어튀김(찹)(1.5.6.17)","배추김치(9)","블루베리잼치즈크로플(1.2.5.6.13)"],kcal:848.7},
+    19:{items:["김밥볶음밥(1.2.5.6.10.15.16)","얼갈이버섯된장국(5.6)","두부무조림(5.6.13)","중화식청경채찜(5.6.13.18)","가지나물무침","통새우꼬치(1.2.5.6.9.12.18)","무말랭이김치","아이스슈(초코맛)(1.2.5.6)"],kcal:885.8},
+    20:{items:["백미밥(부)","냉쫄면(1.5.6.13.16)","오이양파무침(5.6.13)","칠리소스돈육강정(1.5.6.10.12.13)","피자군만두(1.2.5.6.10.12.16.18)","깍두기(9)","요구르트(엔요)(2)","감자샐러드(1.4.5.6.13)"],kcal:922.1},
+    21:{items:["백미밥","조랭이떡만두국(1.5.6.10.16.18)","견과류조림(4.5.6.14)","카프레제샐러드(2.4.12.13)","이색나물무침(얼,콩)(5)","뿌링클치킨(1.2.5.6.13.15)","배추김치(9)","트로피칼에이드(12.13)"],kcal:875.9},
+    22:{items:["백미밥","도토리묵냉국(5.6.9.13.16)","두부튀김조림(5.6.13)","새송이고추장구이(5.6.13)","훈제오리채소찜(1.2.5.6)","모듬유채무침(5.6.13)","무말랭이김치","거봉"],kcal:890.2},
+    23:{items:["백미밥(부)","메밀소바(1.3.5.6.9.13)","참외블루베리샐러드(13)","왕새우튀김(1.5.6.9)","갈떡갈떡꼬치(5.6.10.12.13.15.16)","오이무피클","배추김치(9)","요구르트(뽀)(2)"],kcal:867.2},
+    24:{items:["백미밥","돼지등뼈감자탕(5.6.9.10)","돌나물무침(5.6.13)","비빔메밀국수(부)(3.5.6.13)","마파두부(5.6.10.12.13.18)","비엔나떡강정(부)(2.5.6.10.12.13.15.16)","배추김치(9)","키위요거트스무디(2.13)"],kcal:923.0},
+    25:{items:["오므라이스(소시지)(1.2.5.6.10.12.13.15.16.18)","얼갈이버섯된장국(5.6)","오이양파무침(5.6.13)","데리야끼멘츠카츠&크림소스(1.2.5.6.10)","배추김치(9)","플레인요거트(블루베리)(2)"],kcal:931.5},
+    26:{items:["비밥찜닭덮밥(5.6.13.15)","콩나물맑은국(5.6)","잔멸치고추장조림(5.6.13)","식물성왕교자만두찜(1.5.6)","브로콜리깨소스무침(1.5.13)","야채소스(5.6.13)","배추김치(9)","오색구슬떡"],kcal:899.1},
+    27:{items:["백미밥","닭곰탕(15)","넓은어묵조림(1.5.6.13)","콩나물미나리무침(두)(5)","크런치스파이시생선까스(1.2.5.6.12.13)","배추김치(9)","토마토치즈발사믹샐러드(2.12.13)","수박"],kcal:871.7},
+    28:{items:["중화제육덮밥&계란구이(1.5.6.10.13.18)","두부된장국(5.6)","소떡소떡(씨)(1.2.5.6.10.12.13.15.16)","배추김치(9)","따바오만두(1.2.5.6.10.16)","요구르트(엔요)(2)","과일샐러드(여름)(1.4.5.11.12)"],kcal:902.8},
+    29:{items:["백미밥","육개장(5.6.16)","닭날개양념조림(5.6.12.13.15)","참나물무침(5.6)","새송이맛살전(1.5.6)","언양식바싹불고기(1.2.5.6.10.15.16.18)","배추김치(9)","미니프레즐(2.5.6)"],kcal:885.8},
+    30:{items:["백미밥","돼지등뼈김치찌개(9.10)","햄전(1.2.5.6.10.12.15.16)","코다리강정(5.6.13)","불닭팽이버섯구이(2.5.6.13)","배추김치(9)","쫀득쿠키(1.2.5.6)","열대과일샐러드(1.2.5.6)"],kcal:923.2}
+  }
+};
+
+const favorites = JSON.parse(localStorage.getItem('pungsan_meal_favs')) || {};
+
+const adjs = ["맛있는", "배고픈", "배부른", "행복한", "급식소", "든든한", "신선한", "매콤한"];
+const nouns = ["사과", "치킨", "감자", "까스", "수박", "찌개", "튀김", "도넛"];
+let myNick = localStorage.getItem('pungsan_my_nick');
+if (!myNick) {
+  myNick = adjs[Math.floor(Math.random()*adjs.length)] + " " + nouns[Math.floor(Math.random()*nouns.length)];
+  localStorage.setItem('pungsan_my_nick', myNick);
+}
+
+let currentRoom = null;
+let roomStorage = null;
+
+function cleanName(s) { return s.replace(/\([\d\.]+\)\s*$/, '').trim(); }
+function getAllergy(s) { const m = s.match(/\(([\d\.]+)\)\s*$/); return m ? m[1] : null; }
+
+const DOW = ['일','월','화','수','목','금','토'];
+const FIRST_DOW = 1; // 2026년 6월 1일 월요일
+const TODAY = 9;
+let selectedDay = null;
+let selectedMeal = '중식';
+
+const grid = document.getElementById('calGrid');
+
+// [수정완료] 충돌 오류가 나던 부분을 완전히 비우고 안전하게 새로 작성했습니다.
+for (let i = 0; i < FIRST_DOW; i++) {
+  const e = document.createElement('div');
+  e.className = 'day empty';
+  grid.appendChild(e);
+}
+
+for (let d = 1; d <= 30; d++) {
+  const dow = (FIRST_DOW + d - 1) % 7;
+  const cell = document.createElement('div');
+  cell.className = 'day' + (d === TODAY ? ' today' : '') + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '');
+  cell.id = `day-cell-${d}`;
+  cell.onclick = () => selectDay(d);
+  grid.appendChild(cell);
+}
+
+function updateCalendarStars() {
+  for (let d = 1; d <= 30; d++) {
+    const cell = document.getElementById(`day-cell-${d}`);
+    if (!cell) continue;
+    const bStars = getStarCount(d, '조식');
+    const lStars = getStarCount(d, '중식');
+    const dStars = getStarCount(d, '석식');
+    cell.innerHTML = `
+      <div class="day-num">${d}</div>
+      <div class="day-stars-summary">
+        <div class="summary-line ${bStars > 0 ? 'has-stars' : ''}">🌅 ${bStars}</div>
+        <div class="summary-line ${lStars > 0 ? 'has-stars' : ''}">☀️ ${lStars}</div>
+        <div class="summary-line ${dStars > 0 ? 'has-stars' : ''}">🌙 ${dStars}</div>
+      </div>
+    `;
+  }
+}
+
+function selectDay(d) {
+  selectedDay = d;
+  document.querySelectorAll('.day').forEach((el) => {
+    if (el.id === `day-cell-${d}`) el.classList.add('selected');
+    else el.classList.remove('selected');
+  });
+  document.getElementById('mainContent').style.display = 'grid';
+  renderDetail();
+  connectCommentRoom();
+}
+
+function getStarCount(day, meal) {
+  let count = 0;
+  if (!meals[meal] || !meals[meal][day]) return 0;
+  meals[meal][day].items.forEach(item => {
+    const key = `${day}-${meal}-${item}`;
+    if (favorites[key]) count++;
+  });
+  return count;
+}
+
+function toggleFavorite(day, meal, item) {
+  const key = `${day}-${meal}-${item}`;
+  favorites[key] = !favorites[key];
+  localStorage.setItem('pungsan_meal_favs', JSON.stringify(favorites));
+  updateCalendarStars();
+  renderDetail();
+}
+
+function renderDetail() {
+  const d = selectedDay;
+  const dow = DOW[(FIRST_DOW + d - 1) % 7];
+  const data = meals[selectedMeal][d];
+  const tabClasses = { '조식': 'active-b', '중식': 'active-l', '석식': 'active-d' };
+  
+  const tabs = ['조식','중식','석식'].map(m => {
+    const stars = getStarCount(d, m);
+    return `<button class="tab${m===selectedMeal?' '+tabClasses[m]:''}" onclick="switchMeal('${m}')">${m} ${stars>0?`<span class="tab-stars">★${stars}</span>`:''}</button>`;
+  }).join('');
+  
+  let rows = '';
+  if (data) {
+    rows = data.items.map(item => {
+      const isFav = !!favorites[`${d}-${selectedMeal}-${item}`];
+      return `
+        <div class="menu-row ${isFav ? 'favorite' : ''}" onclick="toggleFavorite(${d}, '${selectedMeal}', '${item}')">
+          <div class="menu-left"><span class="star-icon">★</span><span class="menu-name">${cleanName(item)}</span></div>
+          ${getAllergy(item) ? `<span class="allergy">${getAllergy(item)}</span>` : ''}
+        </div>
+      `;
+    }).join('');
+  } else {
+    rows = '<div class="no-meal">해당 식사 정보가 없어요</div>';
+  }
+  document.getElementById('detail').innerHTML = `
+    <div class="detail-header"><span class="detail-date">6월 ${d}일 (${dow})</span>${data ? `<span class="detail-kcal">🔥 ${data.kcal} kcal</span>` : ''}</div>
+    <div class="meal-tabs">${tabs}</div>
+    <div class="menu-list">${rows}</div>
+  `;
+}
+
+function switchMeal(m) {
+  selectedMeal = m;
+  renderDetail();
+  connectCommentRoom();
+}
+
+function connectCommentRoom() {
+  if (currentRoom) { client.leaveRoom(currentRoom.id); }
+  
+  const mealEng = selectedMeal === '조식' ? 'brk' : selectedMeal === '중식' ? 'lun' : 'din';
+  const roomId = `pungsan-june-${selectedDay}-${mealEng}`;
+  
+  document.getElementById('commentList').innerHTML = '<div class="no-comments">댓글 불러오는 중...</div>';
+  
+  currentRoom = client.enterRoom(roomId, { initialStorage: { comments: new Liveblocks.LiveList() } });
+  
+  currentRoom.getStorage().then((storage) => {
+    roomStorage = storage;
+    const list = storage.root.get("comments");
+    
+    currentRoom.subscribe(list, () => { renderComments(list.toArray()); });
+    renderComments(list.toArray());
+  });
+}
+
+function renderComments(cmtArray) {
+  const listEl = document.getElementById('commentList');
+  if (!cmtArray || cmtArray.length === 0) {
+    listEl.innerHTML = '<div class="no-comments">아직 등록된 한줄평이 없어요.<br>첫 댓글을 남겨보세요!</div>';
+    return;
+  }
+  listEl.innerHTML = cmtArray.map(c => `
+    <div class="comment-item">
+      <div class="comment-meta"><span>👤 ${c.nick}</span> <span>${c.time || ''}</span></div>
+      <div>${escapeHtml(c.text)}</div>
+    </div>
+  `).join('');
+  listEl.scrollTop = listEl.scrollHeight;
+}
+
+function jsAddComment() {
+  const input = document.getElementById('commentInput');
+  const txt = input.value.trim();
+  if (!txt || !roomStorage) return;
+  
+  const list = roomStorage.root.get("comments");
+  const now = new Date();
+  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  
+  list.push({ nick: myNick, text: txt, time: timeStr });
+  input.value = '';
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+updateCalendarStars();
+selectDay(TODAY);
+</script>
+<script src="https://unpkg.com/@liveblocks/client@1.12.0/dist/index.js"></script>
+<script>
+const client = Liveblocks.createClient({ publicApiKey: "pk_prod_gT6m88mNAnH97uG6lX8W1qgZ" });
+</script>
+</body>
+</html>
