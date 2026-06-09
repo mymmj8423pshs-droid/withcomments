@@ -114,6 +114,8 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@liveblocks/client@latest/dist/umd/liveblocks.js"></script>
+
 <script>
 const meals = {
   "조식": {
@@ -137,7 +139,7 @@ const meals = {
     18:{items:["흑미밥","건새우아욱국(5.6.9)","갈치무조림(5.6.13)","청경채된장무침(5.6)","베이컨감자채볶음(5.6.10)","옛날소시지전(1.2.5.6.10.15.16)","배추김치(9)","딸기(친환경)(11)"]},
     19:{items:["백미밥","순두부찌개(1.5.6.9.10.13.17.18)","캔꽁치김치조림(5.6.9.13)","비름나물된장무침(5.6)","청포묵김가루무침(5.6.13)","완자전(1.2.5.6.10.12.15.16.18)","배추김치(9)","레몬(친환경)(11)"]},
     20:{items:["백미밥","쇠고기버섯국(5.6.16)","게맛살어묵조림(1.5.6.13)","쑥갓두부무침(4.5.6)","순후추치킨스테이크(1.2.5.6.15.18)","배추김치(9)","사과아몬드에이드(13)"]},
-    21:{items:["쇠고기장���죽(5.6.16)","고구마슈빅데니쉬(생)(1.2.5.6)","크리스피핫도그(1.2.5.6.10.12.16)","스크램블드에그(1.5.10)","바나나우유(소)(2)","그린샐러드(1.5)"]},
+    21:{items:["쇠고기장채죽(5.6.16)","고구마슈빅데니쉬(생)(1.2.5.6)","크리스피핫도그(1.2.5.6.10.12.16)","스크램블드에그(1.5.10)","바나나우유(소)(2)","그린샐러드(1.5)"]},
     22:{items:["백미밥","들깨순두부탕(5)","쇠고기장조림(1.5.6.13.16)","비름나물무침(5.6)","멸치고추장조림(큰)(5.6.13)","파래돌김자반(5)","배추김치(9)","레몬(친환경)(11)"]},
     23:{items:["잣죽(19)","반미샌드위치(반)(1.2.5.6.15)","비엔나소시지&케첩(2.5.6.10.12.15.16)","훈제계란(1)","오이피클(아삭)","오렌지주스(100)(13)","사과호두에이드(13.14)"]},
     24:{items:["백미밥","쇠고기콩나물국(5.6.16)","연근조림(5.6.13)","햄감자채볶음(1.2.5.6.10.13.15.16)","간장돼지불고기(5.6.10.13)","배추김치(9)","요구르트(요)(2)"]},
@@ -405,26 +407,19 @@ function escapeHtml(str) {
 
 updateCalendarStars();
 
-// Liveblocks 라이브러리 동적 로드 및 초기화
-(function() {
-  const script = document.createElement('script');
-  script.src = 'https://unpkg.com/@liveblocks/client@latest/dist/index.umd.js';
-  script.onload = function() {
-    if (typeof Liveblocks !== 'undefined') {
-      client = Liveblocks.createClient({ 
-        publicApiKey: "pk_prod_gT6m88mNAnH97uG6lX8W1qgZ" 
-      });
-      console.log("✅ Liveblocks 초기화 완료");
-      if (TODAY) selectDay(TODAY);
-    } else {
-      console.error("❌ Liveblocks 로드되지 않음");
-    }
-  };
-  script.onerror = function() {
-    console.error("❌ Liveblocks 스크립트 로드 실패");
-  };
-  document.body.appendChild(script);
-})();
+// Liveblocks 라이브러리 로드 및 초기화
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof Liveblocks !== 'undefined') {
+    console.log("✅ Liveblocks 라이브러리 이미 로드됨");
+    client = Liveblocks.createClient({ 
+      publicApiKey: "pk_dev_8L_F1ojfeSTq2fnqqNG_zkUm_-3qzbUpAUV0xbuRi2fc2QY67bbIfBuWnRuxE08l" 
+    });
+    console.log("✅ Liveblocks 초기화 완료");
+    if (TODAY) selectDay(TODAY);
+  } else {
+    console.error("❌ Liveblocks 라이브러리가 로드되지 않았습니다");
+  }
+});
 </script>
 
 </body>
